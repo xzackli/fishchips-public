@@ -1,11 +1,11 @@
 # fishchips
 
-*fishchips* simplifies the forecasting of parameter constraints using Fisher information matrix methods for CMB and LSS experiments. This package is mostly to reduce friction for my future self, since I'm sure I will someday want to make some more Fisher forecasts, and I will definitely forget how.
+*fishchips* is a simple package for forecasting parameter constraints with Fisher information matrix methods for CMB and LSS experiments. I wrote this mostly to reduce friction for my future self, since I'm sure I will someday want to make some more Fisher forecasts, and I will definitely forget how.
 
 There are a lot of other Fisher codes out there, and the basic idea is pretty simple. What makes *fishchips* so delicious?
 
-1. **Easily add new ingredients**. Unlike other areas of software development, every user of research code usually wants to incorporate something new into a dish. *fishchips* was designed so that your newfangled octospectrum forecasts can easily be compared and combined with existing CMB, BAO, and weak lensing experiments.
-2. **You cook it yourself (quickly)**. *fishchips* is more of a kit containing some common ingredients for preparing Fisher matrices, and every step is exposed. The intended workflow involves starting with a copy of the example recipes in the included Jupyter notebooks, and making changes. It isn't boilerplate, if you constantly need to turn the knobs on the boiler!
+1. **Easily add new ingredients**. Unlike other areas of software development, every user of research code wants to incorporate something new into the dish. *fishchips* was designed so that new physics and observables are straightforward to implement.
+2. **You cook it yourself**. *fishchips* is more of a kit containing some common ingredients for preparing Fisher matrices, and every step is exposed. The intended workflow involves starting with a copy of the example recipes in the included Jupyter notebooks, and making changes. It isn't boilerplate, if you constantly need to turn the knobs on the boiler!
 3. **No configuration files, just Python**. *fishchips* is intended for interactive work. Since it's all Python, moving it to the cluster is a matter of pasting your Jupyter cells into a Python script.
 
 The code for *fishchips* was originally written for [arxiv:1806.10165](https://arxiv.org/abs/1806.10165), and the specifications for the included CMB experiment forecasts are in the paper's Table 1.
@@ -16,7 +16,13 @@ The code for *fishchips* was originally written for [arxiv:1806.10165](https://a
 
 ## Basic Example
 
+The basic workflow using CLASS:
+1. Create an `Observables` object, and describe the parameters, fiducial values, and parameter values for stepping away from the fiducial to estimate derivatives.
+2. Call `Observables.compute_cosmo` with appropriate inputs for the CLASS wrapper, for each cosmology evaluation required for the derivatives, and at the fiducial values.
+3. Create an `Experiment` object and pass the `Observables` object to the `Experiment.get_fisher()` function, get a Fisher matrix back!
+
 In this example, we'll make some forecasts for the Planck TT/TE/EE constraints on three cosmological parameters: the amplitude `A_s`, spectral index `n_s`, and optical depth to reionization `tau_reio`, holding other parameters fixed.
+
 
 ```python
 import fishchips
