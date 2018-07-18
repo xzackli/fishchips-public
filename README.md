@@ -25,19 +25,23 @@ In this example, we'll make some forecasts for the Planck TT/TE/EE constraints o
 
 
 ```python
-import fishchips
+from fishchips.experiments import CMB_Primary
+from fishchips.cosmo import Observables
+import fishchips.util
+
 from classy import Class  # CLASS python wrapper
+import numpy as np
 
 # create an Observables object to store information for derivatives
-obs = fishchips.Observables(
+obs = Observables(
     parameters=['A_s', 'n_s', 'tau_reio'],
     fiducial=[2.1e-9, 0.968, 0.066],
     left=[2.0e-9, 0.948, 0.056],
     right=[2.2e-9, 0.988, 0.076])
 
 # generate a template CLASS python wrapper configuration
-classy_template = {'output': 'tCl lCl',
-                   'l_max_scalars': 2000,
+classy_template = {'output': 'tCl pCl lCl',
+                   'l_max_scalars': 2500,
                    'lensing': 'yes'}
 # add in the fiducial values too
 classy_template.update(dict(zip(obs.parameters, obs.fiducial)))
@@ -62,5 +66,8 @@ example_Planck = fishchips.experiments.CMB_Primary(
 fisher = example_Planck.get_fisher(obs)
 
 # use the plotting utility to get some dope ellipses for 1,2 sigma.
-fisherchips.util.plot_triangle(fisher)
+cov = np.linalg.inv(fisher)
+fishchips.util.plot_triangle(obs, cov);
 ```
+
+![example triangle plot](basic_output.png)
