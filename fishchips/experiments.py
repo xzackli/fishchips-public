@@ -189,3 +189,49 @@ class CMB_Primary(Experiment):
         return self.compute_fisher_from_spectra(fid,
                                                 df,
                                                 obs.parameters)
+
+
+class Prior(Experiment):
+    """
+    Class for returning a prior Fisher matrix.
+
+    It will be a zero matrix with a single nonzero value, on the diagonal
+    for the parameter specified, corresponding to a Gaussian prior on a single
+    parameter.
+    """
+
+    def __init__(self, parameter_name, prior_error):
+        """
+        Set up the prior with the information it needs.
+
+        Parameters
+        ----------
+            parameter_name (string): name of the parameter we are putting a prior on
+            prior_error (float): the 1-sigma prior, i.e. prior_mean +- prior_error.
+
+        """
+        self.parameter_name = parameter_name
+        self.prior_error = prior_error
+
+    def get_fisher(self, obs):
+        """
+        Return a Fisher matrix for a Gaussian prior.
+
+        Parameters
+        ----------
+            parameters (list of string): names of parameters in Fisher matrix
+            means (list of float): mean values of parameters in Fisher matrix
+
+        Return
+        ------
+            Numpy array of floats with dimensions (len(params), len(params))
+
+        """
+        fisher = np.zeros((len(obs.parameters), len(obs.parameters)))
+
+        for index, parameter in enumerate(obs.parameters):
+            if self.parameter_name == parameter:
+                fisher[index, index] = 1./self.prior_error**2
+                return fisher
+
+        return fisher
