@@ -70,4 +70,4 @@ cov = np.linalg.inv(fisher)
 fishchips.util.plot_triangle(obs, cov);
 ```
 
-![example triangle plot](basic_output.png | width=50)
+<img src="basic_output.png" width="300" height="300" title="basic triangle plot">
