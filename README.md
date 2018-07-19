@@ -1,8 +1,10 @@
 # fishchips
 
-*fishchips* is a simple package for forecasting parameter constraints with Fisher information matrix methods for CMB and LSS experiments. I wrote this mostly to reduce friction for my future self, since I'm sure I will someday want to make some more Fisher forecasts, and I will definitely forget how.
+*fishchips* is a simple package for forecasting parameter constraints with Fisher information matrix methods for CMB and LSS experiments.
 
-There are a lot of other Fisher codes out there, and the basic idea is pretty simple. What makes *fishchips* so delicious?
+I wrote this mostly to reduce friction for my future self. It's also a test for some ideas I've been stewing on about general software design in the academic context: in particular, that abstraction is much more expensive for research code in comparison to general software, in terms of developer time.
+
+There are a lot of other Fisher codes out there, and the basic idea is pretty simple. What makes *fishchips* more delicious?
 
 1. **Easily add new ingredients**. Unlike other areas of software development, every user of research code wants to incorporate something new into the dish. *fishchips* was designed so that new physics and observables are straightforward to implement.
 2. **You cook it yourself**. *fishchips* is more of a kit containing some common ingredients for preparing Fisher matrices, and every step is exposed. The intended workflow involves starting with a copy of the example recipes in the included Jupyter notebooks, and making changes. It isn't boilerplate, if you constantly need to turn the knobs on the boiler!

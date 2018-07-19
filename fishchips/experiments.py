@@ -19,12 +19,19 @@ class Experiment:
     establishes noise properties, for example.
     """
 
-    def get_fisher(self, cosmos):
-        """Initialize the experiment with noise parameters.
+    def __init__(self):
+        """Initialize the experiment with noise parameters."""
+        pass
 
-        Args:
+    def get_fisher(self, cosmos):
+        """
+        Compute the Fisher matrix.
+
+        Parameters
+        ----------
             cosmos (list of string): names of parameters
             means (list of float): mean values of parameters
+
         """
         raise NotImplementedError("You need to implement the computation of "
                                   "the Fisher matrix!")
@@ -39,9 +46,9 @@ class CMB_Primary(Experiment):
     follows equation 4 of arxiv:1402.4108.
     """
 
-    def __init__(self, theta_fwhm=[10., 7., 5.],
-                 sigma_T=[68.1, 42.6, 65.4],
-                 sigma_P=[109.4, 81.3, 133.6],
+    def __init__(self, theta_fwhm=(10., 7., 5.),
+                 sigma_T=(68.1, 42.6, 65.4),
+                 sigma_P=(109.4, 81.3, 133.6),
                  f_sky=0.65, l_min=2, l_max=2500,
                  verbose=False):
         """

@@ -12,6 +12,21 @@ ALPHA3 = 3.44
 PLOT_MULT = 4.
 """float: Ratio between plot window and sigma."""
 
+PRECISE_CLASS_DICT = {
+                 'neglect_CMB_sources_below_visibility': 0.001,
+                 'perturb_sampling_stepsize': 0.01,
+                 'reionization_optical_depth_tol': 1e-07,
+                 'tol_background_integration': 0.001,
+                 'tol_perturb_integration': 1e-7,
+                 'tol_thermo_integration': 1e-7,
+                 'transfer_neglect_delta_k_S_e': 0.11,
+                 'transfer_neglect_delta_k_S_t0': 0.15,
+                 'transfer_neglect_delta_k_S_t1': 0.04,
+                 'transfer_neglect_delta_k_S_t2': 0.15,
+                 'k_max_tau0_over_l_max': 6,
+                 'accurate_lensing': 1}
+"""dict: Built-in high precision settings. This will take a long time to compute!"""
+
 
 def get_ellipse(par1, par2, params, cov, scale1=1, scale2=1):
     """
