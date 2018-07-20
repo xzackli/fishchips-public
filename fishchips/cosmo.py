@@ -29,6 +29,22 @@ class Observables:
         self.right = right
         self.cosmos = {}
 
+    def get_cosmo(self, classy_dict):
+        """
+        Compute a cosmology with CLASS.
+
+        This is purely for convenience.
+        Parameters
+        ----------
+        classy_dict (dictionary) : contains the inputs for the CLASS python
+            wrapper such as 'output' and 'l_max_scalars'.
+
+        """
+        cosmo = Class()
+        cosmo.set(classy_dict)
+        cosmo.compute()
+        return cosmo
+        
     def compute_cosmo(self, key, classy_dict):
         """
         Generate an entry in the dictionary Observables.cosmos with CLASS.
@@ -40,7 +56,35 @@ class Observables:
             wrapper such as 'output' and 'l_max_scalars'.
 
         """
-        cosmo = Class()
-        cosmo.set(classy_dict)
-        cosmo.compute()
-        self.cosmos[key] = cosmo
+        self.cosmos[key] = self.get_cosmo(classy_dict)
+        
+    def grid_cosmo(self, parameter, parameter_grid, classy_dict, verbose=False):
+        """
+        Compute a grid of cosmologies, varying one parameter over a grid.
+        
+        Parameters
+        ----------
+        parameter (string) : name of parameter in the CLASS dict
+        parameter_grid (list of float) : grid over which the parameter will
+            be varied
+        classy_dict (dictionary) : base dictionary to be copied for each 
+            cosmology evaluation
+            
+        Returns
+        -------
+            list of CLASS objects : contains a list of computed cosmologies,
+                as a result of varying the parameter over the grid
+        """
+        cosmo_list = []
+        for grid_value in parameter_grid:
+            cosmo = Class()
+            temp_dict = classy_dict.copy()
+            temp_dict[parameter] = grid_value
+            if verbose:
+                print(temp_dict)
+            cosmo.set(temp_dict)
+            cosmo.compute()
+            cosmo_list.append(cosmo)
+        return cosmo_list
+        
+        
