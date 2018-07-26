@@ -220,7 +220,7 @@ class Prior(Experiment):
         self.parameter_name = parameter_name
         self.prior_error = prior_error
 
-    def get_fisher(self, obs):
+    def get_fisher(self, obs, lensed_Cl=True):
         """
         Return a Fisher matrix for a Gaussian prior.
 
@@ -242,3 +242,62 @@ class Prior(Experiment):
                 return fisher
 
         return fisher
+
+
+def get_PlanckPol_combine(other_exp_l_min=100):
+    # planck from Allison + Madhavacheril
+    
+    TEB = CMB_Primary(theta_fwhm=[33,    23,  14,  10, 7, 5, 5], 
+                           sigma_T = [145,  149,  137,65, 43,66,200],
+                           sigma_P = [1e100,1e100,450,103,81,134,406],
+                           f_sky = 0.2,
+                           l_min = other_exp_l_min,
+                           l_max = 2500)
+
+    low_TEB = CMB_Primary(theta_fwhm=[33,    23,  14,  10, 7, 5, 5], 
+                           sigma_T = [145,  149,  137,65, 43,66,200],
+                           sigma_P = [1e100,1e100,450,103,81,134,406],
+                           f_sky = 0.6,
+                           l_min = 30,
+                           l_max = other_exp_l_min)
+    
+    TT = CMB_Primary(theta_fwhm=[33,    23,  14,  10, 7, 5, 5], 
+                           sigma_T = [145,   149,  137,   65,   43,   66,  200],
+                           sigma_P = [1e100,1e100,1e100,1e100,1e100,1e100,1e100],
+                           f_sky = 0.6,
+                           l_min = 2,
+                           l_max = 30)
+    
+    return [TT, low_TEB, TEB] # NOTE NO TAU PRIOR, MUST INCLUDE WITH OTHER
+
+    
+def get_S4(theta=1.5, error=1.0, f_sky=0.4):
+    # S4 forecasting specs
+
+    # just P for 100-300
+    low_P = CMB_Primary(theta_fwhm=[theta], 
+                           sigma_T = [1e100],
+                           sigma_P = [1.4*error],
+                           f_sky = f_sky,
+                           l_min = 100,
+                           l_max = 300)
+
+    # 300-3000 both T+P
+    low_ell = CMB_Primary(theta_fwhm=[theta], 
+                           sigma_T = [error],
+                           sigma_P = [1.4*error],
+                           f_sky = f_sky,
+                           l_min = 300,
+                           l_max = 3000)
+    
+    # just P for 3000-5000
+    high_ell = CMB_Primary(theta_fwhm=[theta], 
+                           sigma_T = [1e100],
+                           sigma_P = [1.4*error],
+                           f_sky = f_sky,
+                           l_min = 3000,
+                           l_max = 5000)
+    
+    tau_prior = Prior( 'tau_reio', 0.01 )
+
+    return [low_P, low_ell, high_ell, tau_prior] + get_PlanckPol_combine()
