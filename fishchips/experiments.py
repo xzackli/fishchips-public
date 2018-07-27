@@ -301,3 +301,19 @@ def get_S4(theta=1.5, error=1.0, f_sky=0.4):
     tau_prior = Prior( 'tau_reio', 0.01 )
 
     return [low_P, low_ell, high_ell, tau_prior] + get_PlanckPol_combine()
+
+
+def get_S3(theta=1.4, error=10.0, f_sky=0.4):
+    # S3 forecasting specs
+    
+    S3 = CMB_Primary(theta_fwhm=[theta], 
+                           sigma_T = [error],
+                           sigma_P = [1.4*error],
+                           f_sky = f_sky,
+                           l_min = 100,
+                           l_max = 3000)
+    
+    tau_prior = Prior( 'tau_reio', 0.01 )
+    
+    return [S3, tau_prior] + get_PlanckPol_combine()
+

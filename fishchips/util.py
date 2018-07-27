@@ -225,3 +225,68 @@ def plot_triangle(obs, cov, f=None, ax=None, color='black', positive_definite=[]
                     ax[jj, ii].axis('off')
 
     return f, ax
+
+
+# From Tram's cosmology notebooks on neutrinos with CLASS.
+def get_masses(dmsq_atm, sum_masses, hierarchy):
+    """
+    Compute separate masses given a sum of neutrino mass.
+    
+    Parameters
+    ----------
+        dmsq_atm (float) : squared mass difference between
+            the large gap between species
+        sum_masses (float): sum of the masses of the neutrino
+            species
+        hierarchy (string): specify 'NH' for normal or 'IH' 
+            for inverted. actually just needs an 'n' in the 
+            string for normal, else inverted.
+            
+    Returns
+    -------
+        float, float corresponding to 2,1 degeneracy masses
+
+    """
+    if 'n' in hierarchy.lower():
+        #Normal hierarchy:
+        r = np.roots([3,-4*sum_masses,sum_masses**2-dmsq_atm])
+        m_minus = min(r)
+    else:
+        r = np.roots([3,2*sum_masses,4*dmsq_atm-sum_masses**2])
+        m_minus = max(r)
+    return m_minus, np.sqrt(dmsq_atm+m_minus**2)
+
+def neutrino_dict(input_dict, dmsq_atm=2e-3, hierarchy='NH'):
+    """
+    Process a dictionary and replace sum_mnu.
+    
+    To get CLASS to get separate neutrino species, you need to change
+    the dictionary a bit. We make a copy and replace sum_mnu with 
+    m_ncdm and deg_ncdm.
+    
+    Parameters
+    ----------
+        input_dict (dict) : a dictionary for calling CLASS, 
+            contains the key sum_mnu
+        dmsq_atm (float) : squared mass gap from atmospheric measurements
+        hierarchy (string) : specify normal or inverted hierarchy, use
+            'NH' or 'IH'.
+    
+    Returns
+    -------
+        dict : processed dict with m_ncdm and dec_ncdm set to the 
+            right things
+
+    """
+    neut_dict = input_dict.copy()
+    if 'sum_mnu' in input_dict:
+        sum_masses = input_dict['sum_mnu']
+        del neut_dict['sum_mnu']
+        [mm, mp] = get_masses(dmsq_atm, sum_masses, hierarchy)
+
+        neut_dict['m_ncdm'] = str(mm)+','+str(mp)
+        neut_dict['deg_ncdm'] = '2,1'
+    
+    neut_dict['N_ncdm'] = 2
+    return neut_dict
+
