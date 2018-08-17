@@ -10,7 +10,7 @@ There are a lot of other Fisher codes out there, and the basic idea is pretty si
 2. **You cook it yourself**. *fishchips* is more of a kit containing some common ingredients for preparing Fisher matrices, and every step is exposed. The intended workflow involves starting with a copy of the example recipes in the included Jupyter notebooks, and making changes. It isn't boilerplate, if you constantly need to turn the knobs on the boiler!
 3. **No configuration files, just Python**. *fishchips* is intended for interactive work. Since it's all Python, moving it to the cluster is a matter of pasting your Jupyter cells into a Python script.
 
-The code for *fishchips* was originally written for [arxiv:1806.10165](https://arxiv.org/abs/1806.10165), and the specifications for the included CMB experiment forecasts are in the paper's Table 1.
+The code for *fishchips* was originally written for [arxiv:1806.10165](https://arxiv.org/abs/1806.10165), and the specifications for the included CMB experiment forecasts are in the paper's Table 1. For an introduction to the theory behind Fisher forecasts, check out the included, [standalone notebook](http://nbviewer.jupyter.org/github/xzackli/fishchips-public/blob/master/notebooks/Introduction%20to%20Fisher%20Forecasting.ipynb).
 
 ## Requirements
 * The usual scientific Python stack (numpy, scipy, matplotlib).
