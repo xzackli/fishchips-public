@@ -3,6 +3,7 @@
 from orphics import lensing, io, stats, cosmology, maps
 from fishchips.experiments import Experiment
 import numpy as np
+import itertools
 
 class CMB_Lensing_Only(Experiment):
     """Stores information on noise, priors, and computed Fisher matrices.
@@ -13,41 +14,58 @@ class CMB_Lensing_Only(Experiment):
     def __init__(self, 
              lens_beam = 7.0,lens_noiseT = 33.,lens_noiseP = 56.,
              lens_tellmin = 2,lens_tellmax = 3000,lens_pellmin = 2,
-             lens_pellmax = 3000,lens_kmin = 80,lens_kmax = 2000, lens_f_sky=0.65 ):
+             lens_pellmax = 3000,lens_kmin = 80,lens_kmax = 2000, lens_f_sky=0.65,
+                bin_width=80, estimators=('TT','TE','EE','EB','TB')):
 
         # get lensing noise
         # Initialize cosmology and Clkk. Later parts need dimensionless spectra.
         self.l_min = lens_tellmin
-        self.l_max = lens_tellmax
+        # CLASS can only go up to 550
+        self.l_max = min(max(lens_tellmax, lens_pellmax)+1000,5500) 
         self.k_min = lens_kmin
         self.k_max = lens_kmax
         self.f_sky = lens_f_sky
-        cc = cosmology.Cosmology(lmax=self.l_max,pickling=True,dimensionless=True)
+        
+        # generate cosmology with orphics
+        lmax = self.l_max
+        cc = cosmology.Cosmology(lmax=lmax,pickling=True,dimensionless=False)
         theory = cc.theory
-        ells = np.arange(2,self.l_max,1)
+        ells = np.arange(2,lmax,1)
         clkk = theory.gCl('kk',ells)
-
-        # Make a map template for calculating the noise curve on
-        shape,wcs = maps.rect_geometry(width_deg = 5.,px_res_arcmin=1.5)
+        Tcmb = 2.726
+        # compute noise curves
+        sT = lens_noiseT * (np.pi/60./180.)
+        sP = lens_noiseP * (np.pi/60./180.)
+        theta_FWHM = lens_beam * (np.pi/60./180.)
+        muK = Tcmb*1.0e6
+        # unitless white noise
+        exp_term = np.exp(ells*(ells+1)*(theta_FWHM**2)/(8*np.log(2)))
+        NlTT = sT**2 * exp_term #/ muK**2
+        NlEE = sP**2 * exp_term #/ muK**2
+        NlBB = sP**2 * exp_term #/ muK**2
+        
         # Define bin edges for noise curve
-        bin_edges = np.arange(80,lens_kmax,20)
-        nlgen = lensing.NlGenerator(shape,wcs,theory,bin_edges,lensedEqualsUnlensed=True)
-        # Experiment parameters, here for Planck
-        polCombs = ['TT','TE','EE','EB','TB']
-
-        _,_,_,_ = nlgen.updateNoise(
-            beamX=lens_beam,noiseTX=lens_noiseT,noisePX=lens_noiseP,
-            tellminX=lens_tellmin,tellmaxX=lens_tellmax,
-            pellminX=lens_pellmin,pellmaxX=lens_pellmax)
-
-        ls,nls,bells,nlbb,efficiency = nlgen.getNlIterative(polCombs,lens_kmin,lens_kmax,
-                                                            lens_tellmax,lens_pellmin,lens_pellmax,
-                                                            verbose=True,plot=False)
+        bin_edges = np.arange(2,lmax,bin_width)
+        
+        # compute orphics lensing noise
+        ls,nlkks,theory_,qest = lensing.lensing_noise(
+            ells=ells,
+            ntt=NlTT,
+            nee=NlEE,
+            nbb=NlBB,
+            ellmin_t=lens_tellmin, ellmin_e=lens_pellmin,ellmin_b=lens_pellmin,
+            ellmax_t=lens_tellmax, ellmax_e=lens_pellmax,ellmax_b=lens_pellmax,
+            bin_edges=bin_edges,
+            estimators=estimators,
+            ellmin_k = 2,
+            ellmax_k = lens_kmax + 500, # calculate out a bit
+            theory=theory,
+            dimensionless=False)
 
         self.orphics_kk = clkk
         self.orphics_ls = ls
-        self.orphics_nls = nls
-        self.noise_k = np.interp(np.arange(self.l_max+1), ls, nls)
+        self.orphics_nls = nlkks['mv']
+        self.noise_k = np.interp(np.arange(self.l_max+1), ls, nlkks['mv'])
 
         self.noise_k[np.arange(self.l_max+1) <= lens_kmin] = 1e100
         self.noise_k[np.arange(self.l_max+1) >= lens_kmax] = 1e100
@@ -76,8 +94,8 @@ class CMB_Lensing_Only(Experiment):
         """
         npar = len(pars)
         self.fisher = np.zeros((npar, npar))
-        
-        for i,j in itertools.combinations_with_replacement( range(nparams),r=2):
+        print()
+        for i,j in itertools.combinations_with_replacement( range(npar),r=2):
             # following eq 4 of https://arxiv.org/pdf/1402.4108.pdf
             fisher_ij = 0.0
             for l in range(self.k_min, self.k_max):
@@ -88,7 +106,8 @@ class CMB_Lensing_Only(Experiment):
                 fisher_contrib = (2*l+1)/2. * self.f_sky * \
                     (df[pars[i]+'_kk'][l] * 
                      df[pars[j]+'_kk'][l])/Clkk_plus_Nlkk_sq
-
+                fisher_ij += fisher_contrib
+                
             # fisher is diagonal
             self.fisher[i,j] = fisher_ij
             self.fisher[j,i] = fisher_ij
@@ -115,10 +134,8 @@ class CMB_Lensing_Only(Experiment):
         # first compute the fiducial
         fid_cosmo = obs.cosmos['CLASS_fiducial']
         Tcmb = fid_cosmo.T_cmb()
-        if lensed_Cl:
-            fid_cl = fid_cosmo.lensed_cl(self.l_max)
-        else:
-            fid_cl = fid_cosmo.raw_cl(self.l_max)
+        fid_cl = fid_cosmo.lensed_cl(self.l_max)
+        
         fid = {'kk': 0.25 * ((fid_cl['ell']+2)*(fid_cl['ell']+1)
                *(fid_cl['ell'])*(fid_cl['ell']-1) * fid_cl['pp'])}
 
@@ -139,6 +156,7 @@ class CMB_Lensing_Only(Experiment):
 
             df[par + '_kk'] = (kk_right - kk_left) / dx
 
+            
         return self.compute_fisher_from_spectra(fid,
                                                 df,
                                                 obs.parameters)

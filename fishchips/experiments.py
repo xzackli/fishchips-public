@@ -317,3 +317,16 @@ def get_S3(theta=1.4, error=10.0, f_sky=0.4):
     
     return [S3, tau_prior] + get_PlanckPol_combine()
 
+
+# lensing likelihoods
+def get_S3_Lensing_Only(theta=1.4, error=10.0, f_sky=0.4):
+    import fishchips.cmb_lensing
+    return fishchips.cmb_lensing.CMB_Lensing_Only(lens_beam=theta, lens_noiseT=error,
+                            lens_noiseP=1.4*error, lens_f_sky=f_sky,
+                            lens_pellmax = 4000,lens_kmax = 3000)
+
+def get_S4_Lensing_Only(theta=1.5, error=1.0, f_sky=0.4):
+    import fishchips.cmb_lensing
+    return fishchips.cmb_lensing.CMB_Lensing_Only(lens_beam=theta, lens_noiseT=error,
+                           lens_noiseP=1.4*error, lens_f_sky=f_sky,
+                           lens_pellmax = 4000, lens_kmax = 3000)
