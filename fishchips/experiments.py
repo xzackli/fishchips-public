@@ -242,7 +242,120 @@ class Prior(Experiment):
                 return fisher
 
         return fisher
+    
+    
+class rs_dv_BAO_Experiment(Experiment):
+    """
+    Class for returning a prior Fisher matrix.
 
+    It will be a zero matrix with a single nonzero value, on the diagonal
+    for the parameter specified, corresponding to a Gaussian prior on a single
+    parameter.
+    """
+
+    def __init__(self, redshifts, errors):
+        """Initialize BAO experiment with z and sigma_fk
+        For details, see appendix of Allison+2015 at arxiv 1509.07471
+        """
+        self.redshifts = np.array(redshifts)
+        self.errors = np.array(errors)
+    
+    
+    def compute_fisher_from_spectra(self, fid, df, pars):
+        """
+        Compute the Fisher matrix given fiducial and derivative dicts.
+
+        This function is for generality, to enable easier interfacing with
+        codes like CAMB. The input parameters must be in the units of the
+        noise, muK^2.
+
+        Parameters
+        ----------
+        fid (dictionary) : keys are '{parameter_XY}' with XY in {tt, te, ee}.
+            These keys point to the actual power spectra.
+
+        df (dictionary) :  keys are '{parameter_XY}' with XY in {tt, te, ee}.
+            These keys point to numerically estimated derivatives generated
+            from precomputed cosmologies.
+
+        pars (list of strings) : the parameters being constrained in the
+            Fisher analysis.
+
+        """
+        npar = len(pars)
+        self.fisher = np.zeros((npar, npar))
+
+        for i, j in itertools.combinations_with_replacement(range(npar), r=2):
+            # following eq 4 of https://arxiv.org/pdf/1402.4108.pdf
+            fisher_ij = 0.0
+            
+            for z_ind, z in enumerate(self.redshifts):
+                df_dtheta_i = df[pars[i]+'_dfdtheta'][z_ind]
+                df_dtheta_j = df[pars[j]+'_dfdtheta'][z_ind]
+                fisher_ij += np.sum( (df_dtheta_i*df_dtheta_j)/(self.errors[z_ind]**2) )
+
+            # fisher is diagonal, so we get half of the matrix for free
+            self.fisher[i, j] = fisher_ij
+            self.fisher[j, i] = fisher_ij
+
+        return self.fisher
+
+    def get_fisher(self, obs, lensed_Cl=True):
+        """
+        Return a Fisher matrix using a dictionary full of CLASS objects.
+
+        This function wraps the functionality of `compute_fisher_from_spectra`,
+        for use with a dictionary filled with CLASS objects.
+
+        Parameters
+        ----------
+            obs (Observations instance) : contains many evaluated CLASS cosmologies, at
+                both the derivatives and the fiducial in the cosmos object.
+
+        Returns
+        -------
+            Numpy array of floats with dimensions (len(params), len(params))
+
+        """
+        # first compute the fiducial
+        fid_cosmo = obs.cosmos['CLASS_fiducial']
+        fid = {}
+
+        # the primary task of this function is to compute the derivatives from `cosmos`,
+        # the dictionary of computed CLASS cosmologies
+        dx_array = np.array(obs.right) - np.array(obs.left)
+
+        df = {}
+        # loop over parameters, and compute derivatives
+        for par, dx in zip(obs.parameters, dx_array):
+            # for each redshift
+            df[par + '_dfdtheta'] = []
+            
+            for z in self.redshifts:
+                c_left = obs.cosmos[par + '_CLASS_left']
+                da_left = c_left.angular_distance(z)
+                dr_left = z / c_left.Hubble(z)
+                dv_left = pow(da_left * da_left * (1 + z) * (1 + z) * dr_left, 1. / 3.)
+                rs_left = c_left.rs_drag()
+                f_left = rs_left / dv_left
+
+                c_right = obs.cosmos[par + '_CLASS_right']
+                da_right = c_right.angular_distance(z)
+                dr_right = z / c_right.Hubble(z)
+                dv_right = pow(da_right * da_right * (1 + z) * (1 + z) * dr_right, 1. / 3.)
+                rs_right = c_right.rs_drag()
+                f_right = rs_right / dv_right
+                
+                df_dtheta = ( f_right - f_left ) / dx
+                df[par + '_dfdtheta'].append(df_dtheta)
+
+
+        return self.compute_fisher_from_spectra(fid,
+                                                df,
+                                                obs.parameters)
+    
+    
+# utility functions
 
 def get_PlanckPol_combine(other_exp_l_min=100):
     # planck from Allison + Madhavacheril

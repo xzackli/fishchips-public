@@ -14,7 +14,7 @@ class CMB_Lensing_Only(Experiment):
     def __init__(self, 
              lens_beam = 7.0,lens_noiseT = 33.,lens_noiseP = 56.,
              lens_tellmin = 2,lens_tellmax = 3000,lens_pellmin = 2,
-             lens_pellmax = 3000,lens_kmin = 80,lens_kmax = 2000, lens_f_sky=0.65,
+             lens_pellmax = 3000,lens_kmin = 80,lens_kmax = 3000, lens_f_sky=0.65,
                 bin_width=80, estimators=('TT','TE','EE','EB','TB')):
 
         # get lensing noise
@@ -155,8 +155,9 @@ class CMB_Lensing_Only(Experiment):
                       *(cl_right['ell'])*(cl_right['ell']-1) * cl_right['pp'])
 
             df[par + '_kk'] = (kk_right - kk_left) / dx
-
-            
+        self.df = df
+        self.fid = fid
+        
         return self.compute_fisher_from_spectra(fid,
                                                 df,
                                                 obs.parameters)
