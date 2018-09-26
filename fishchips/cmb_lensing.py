@@ -15,7 +15,8 @@ class CMB_Lensing_Only(Experiment):
              lens_beam = 7.0,lens_noiseT = 33.,lens_noiseP = 56.,
              lens_tellmin = 2,lens_tellmax = 3000,lens_pellmin = 2,
              lens_pellmax = 3000,lens_kmin = 80,lens_kmax = 3000, lens_f_sky=0.65,
-                bin_width=80, estimators=('TT','TE','EE','EB','TB')):
+                bin_width=80, estimators=('TT','TE','EE','EB','TB'), 
+                NlTT=None, NlEE=None, NlBB=None):
 
         # get lensing noise
         # Initialize cosmology and Clkk. Later parts need dimensionless spectra.
@@ -33,6 +34,7 @@ class CMB_Lensing_Only(Experiment):
         ells = np.arange(2,lmax,1)
         clkk = theory.gCl('kk',ells)
         Tcmb = 2.726
+        
         # compute noise curves
         sT = lens_noiseT * (np.pi/60./180.)
         sP = lens_noiseP * (np.pi/60./180.)
@@ -40,9 +42,27 @@ class CMB_Lensing_Only(Experiment):
         muK = Tcmb*1.0e6
         # unitless white noise
         exp_term = np.exp(ells*(ells+1)*(theta_FWHM**2)/(8*np.log(2)))
-        NlTT = sT**2 * exp_term #/ muK**2
-        NlEE = sP**2 * exp_term #/ muK**2
-        NlBB = sP**2 * exp_term #/ muK**2
+        if NlTT is None:
+            NlTT = sT**2 * exp_term #/ muK**2
+        else:
+            NlTT = NlTT[ells]
+        if NlEE is None:
+            NlEE = sP**2 * exp_term #/ muK**2
+        else:
+            NlEE = NlEE[ells]
+        if NlBB is None:
+            NlBB = sP**2 * exp_term #/ muK**2
+        else:
+            NlBB = NlBB[ells]
+            
+            
+        NlTT[ells > lens_tellmax] = 1e100
+        NlEE[ells > lens_pellmax] = 1e100
+        NlBB[ells > lens_pellmax] = 1e100
+            
+        self.NlTT = NlTT
+        self.NlEE = NlEE
+        self.NlBB = NlBB
         
         # Define bin edges for noise curve
         bin_edges = np.arange(2,lmax,bin_width)

@@ -75,6 +75,7 @@ class CMB_Primary(Experiment):
         self.sigma_P = sigma_P * np.array([np.pi/60./180.])
         self.num_channels = len(theta_fwhm)
         self.f_sky = f_sky
+        self.ells = np.arange(l_max+1)
 
         self.l_min = l_min
         self.l_max = l_max
@@ -96,6 +97,11 @@ class CMB_Primary(Experiment):
                         -l*(l+1)*self.theta_fwhm[channel]**2/8./np.log(2.))
             self.noise_T[l] = 1/self.noise_T[l]
             self.noise_P[l] = 1/self.noise_P[l]
+            
+        self.noise_T[self.ells < self.l_min] = 1e100
+        self.noise_P[self.ells < self.l_min] = 1e100
+        self.noise_T[self.ells > self.l_max] = 1e100
+        self.noise_P[self.ells > self.l_max] = 1e100
 
     def compute_fisher_from_spectra(self, fid, df, pars):
         """

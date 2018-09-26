@@ -87,4 +87,8 @@ class Observables:
             cosmo_list.append(cosmo)
         return cosmo_list
         
-        
+    def clean_cosmo(self):
+        # requires python 3 here
+        for key in self.cosmos:
+            self.cosmos[key].struct_cleanup()
+            self.cosmos[key].empty()

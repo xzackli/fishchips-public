@@ -1,0 +1,148 @@
+# -*- coding: utf-8 -*-
+"""Experiment objects for use with CAMB instead of CLASS.
+"""
+
+import numpy as np
+import itertools
+from subprocess import Popen, PIPE
+import shutil
+from astropy.io import ascii
+
+from fishchips.experiments import CMB_Primary
+
+class CAMB_Observables:
+    """
+    Operate CAMB through system calls in the manner that CLASS behaves.
+    """
+    
+    def __init__(self, parameters, fiducial, left, right, 
+                 CAMB_directory, output_root,
+                 CAMB_template="params.ini", CAMB_executable="camb"):
+        """
+        Create the CAMB_Observables class with parameters to be constrained.
+
+        Parameters
+        ----------
+        parameters (list of strings) : parameters to be constrained, for
+            example A_s or omega_m.
+        fiducial (list of floats) : the fiducial values of the parameters
+            to be constrained, this would correspond to the centers of the
+            ellipses you desire.
+        left (list of floats) : the left side values of the parameters
+            to be evaluated for the numerical derivative.
+        right (list of floats) : the right side values of the parameters to
+            be evaluated for the numerical derivative.
+        """
+        
+        self.CAMB_template = CAMB_template
+        self.CAMB_directory = CAMB_directory
+        self.CAMB_executable = CAMB_executable
+        
+        self.parameters = parameters
+        self.fiducial = fiducial
+        self.left = left
+        self.right = right
+        self.cosmos = {}
+        self.output_root = output_root
+    
+    def write_ini_file(self, CAMB_dict, 
+                       template_file="params.ini", destination_file="temp.ini"):
+        """
+        Load in the template ini file and then write a new one.
+        
+        Takes in a dictionary with {parameter: value} pairs. Then
+        iteratively looks in the template file for the parameter,
+        and replaces the line with "parameter = value".
+        """
+        
+        with open(self.CAMB_directory + "/" + template_file) as old, open( f'{self.CAMB_directory}/temp.ini', 'w') as new:
+            for line in old:
+                unchanged = True
+                if (len(line) > 0):
+                    if line[0] != '#':
+                        for param in CAMB_dict:
+                            if (param in line) and ("=" in line):
+                                new.write(f"{param} = {CAMB_dict[param]}\n")
+                                unchanged = False
+                                break
+                if unchanged:
+                    new.write(line)
+    
+    def compute_cosmo(self, key, CAMB_dict, debug=False):
+        """
+        Run CAMB with a certain set of parameters.
+        """
+        
+        # first write a temp.ini
+        self.write_ini_file(CAMB_dict)
+        
+        if debug:
+            print("Calling CAMB.")
+        # now run CAMB
+        process = Popen([f'{self.CAMB_directory}/{self.CAMB_executable}',
+                     f'{self.CAMB_directory}/temp.ini'], 
+                        stdout=PIPE, 
+                        stderr=PIPE, 
+                        cwd=self.CAMB_directory)
+        stdout, stderr = process.communicate()
+        if debug:
+            print(str(stdout).replace('\\n', '\n'))
+            print(str(stderr).replace('\\n', '\n'))
+        
+        # now read the CAMB output
+        lensed = ascii.read(f"{self.CAMB_directory}{self.output_root}_lensedCls.dat",
+                  names= ["ell", "tt", "ee", "bb", "te"] )
+        for cl_name in lensed.colnames:
+            self.cosmos[cl_name] = lensed[cl_name]
+
+class CAMB_CMB_Primary(CMB_Primary):
+    
+    def get_fisher(self, camb_obs, lensed_Cl=True):
+        """
+        Return a Fisher matrix using a dictionary full of CAMB objects.
+
+        This function wraps the functionality of `compute_fisher_from_spectra`,
+        for use with a dictionary filled with CAMB objects.
+
+        Parameters
+        ----------
+            obs (Observations instance) : contains many evaluated CLASS cosmologies, at
+                both the derivatives and the fiducial in the cosmos object.
+
+        Returns
+        -------
+            Numpy array of floats with dimensions (len(params), len(params))
+
+        """
+        # first compute the fiducial
+        fid_cosmo = obs.cosmos['CLASS_fiducial']
+        Tcmb = fid_cosmo.T_cmb()
+        if lensed_Cl:
+            fid_cl = fid_cosmo.lensed_cl(self.l_max)
+        else:
+            fid_cl = fid_cosmo.raw_cl(self.l_max)
+        fid = {'tt': (Tcmb*1.0e6)**2 * fid_cl['tt'],
+               'te': (Tcmb*1.0e6)**2 * fid_cl['te'],
+               'ee': (Tcmb*1.0e6)**2 * fid_cl['ee']}
+
+        # the primary task of this function is to compute the derivatives from `cosmos`,
+        # the dictionary of computed CLASS cosmologies
+        dx_array = np.array(obs.right) - np.array(obs.left)
+
+        df = {}
+        # loop over parameters, and compute derivatives
+        for par, dx in zip(obs.parameters, dx_array):
+            if lensed_Cl:
+                cl_left = obs.cosmos[par + '_CLASS_left'].lensed_cl(self.l_max)
+                cl_right = obs.cosmos[par + '_CLASS_right'].lensed_cl(self.l_max)
+            else:
+                cl_left = obs.cosmos[par + '_CLASS_left'].raw_cl(self.l_max)
+                cl_right = obs.cosmos[par + '_CLASS_right'].raw_cl(self.l_max)
+
+            for spec_xy in ['tt', 'te', 'ee']:
+                df[par + '_' + spec_xy] = (Tcmb*1.0e6)**2 *\
+                    (cl_right[spec_xy] - cl_left[spec_xy]) / dx
+
+        return self.compute_fisher_from_spectra(fid,
+                                                df,
+                                                obs.parameters)
