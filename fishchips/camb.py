@@ -10,6 +10,62 @@ from astropy.io import ascii
 
 from fishchips.experiments import CMB_Primary
 
+class CAMBy:
+    def __init__(self, lensed, unlensed, TCMB=2.7255):
+        """
+        Takes in astropy tables
+        """
+        self.TCMB = TCMB
+        
+        # NOTE: CAMB RETURNS ONLY UP TO ELL 2, SO 
+        # PAD FIRST TWO
+        self.lensed_cl_dict = dict(
+            zip(lensed.colnames,[ 
+                np.hstack([[0.,0.],lensed[p]]) for p in lensed.colnames]))
+        self.raw_cl_dict = dict(
+            zip(unlensed.colnames,[
+                np.hstack([[0.,0.],unlensed[p]]) for p in unlensed.colnames]))
+        
+        # FIX THE ELL ARRAY
+        self.lensed_cl_dict['ell'] = np.arange(len(self.lensed_cl_dict['ell']))
+        self.raw_cl_dict['ell'] = np.arange(len(self.raw_cl_dict['ell']))
+        
+        
+        # convert format to mimic Classy
+        
+        for xx in ['tt', 'ee', 'bb', 'te']:
+            ell = self.lensed_cl_dict['ell']
+            self.lensed_cl_dict[xx][1:] *= 2 * np.pi / (ell * (ell+1))[1:]
+        for xx in ["tt", 'ee', 'te']:
+            ell = self.raw_cl_dict['ell']
+            self.raw_cl_dict[xx][1:] *= 2 * np.pi / (ell * (ell+1))[1:]
+        
+        #--> deflection d:
+        #Cl^dd = l(l+1) C_l^phiphi
+        #--> convergence kappa and shear gamma: the share the same harmonic power spectrum:
+        #Cl^gamma-gamma = 1/4 * [(l+2)!/(l-2)!] C_l^phi-phi
+        ells = np.arange(len(self.raw_cl_dict['pp']))
+        self.lensed_cl_dict['pp'] = (self.raw_cl_dict['pp'] / ells**4)
+        self.lensed_cl_dict['kk'] = self.lensed_cl_dict['pp'] * (ells * (ells+1.)/2.)**2.
+        
+    def clip_l_max(self, input_dict, l_max):
+        return dict(
+            zip(input_dict.keys(), 
+                [input_dict[p][:l_max+1] for p in input_dict]))
+        
+    def T_cmb(self):
+        return self.TCMB
+    
+    # CONVERT TO DICTIONARY TOMOORROW
+    def lensed_cl(self, l_max):
+        return self.clip_l_max(self.lensed_cl_dict, l_max)
+    
+    def raw_cl(self, l_max):
+        return self.clip_l_max(self.raw_cl_dict, l_max)
+
+    
+        
+        
 class CAMB_Observables:
     """
     Operate CAMB through system calls in the manner that CLASS behaves.
@@ -92,9 +148,11 @@ class CAMB_Observables:
         # now read the CAMB output
         lensed = ascii.read(f"{self.CAMB_directory}{self.output_root}_lensedCls.dat",
                   names= ["ell", "tt", "ee", "bb", "te"] )
-        for cl_name in lensed.colnames:
-            self.cosmos[cl_name] = lensed[cl_name]
+        unlensed = ascii.read(f"{self.CAMB_directory}{self.output_root}_scalCls.dat",
+          names = ["ell", "tt", 'ee', 'te', 'pp', 'tp'])
 
+        self.cosmos[key] = CAMBy(lensed, unlensed)
+        
 class CAMB_CMB_Primary(CMB_Primary):
     
     def get_fisher(self, camb_obs, lensed_Cl=True):
@@ -115,7 +173,7 @@ class CAMB_CMB_Primary(CMB_Primary):
 
         """
         # first compute the fiducial
-        fid_cosmo = obs.cosmos['CLASS_fiducial']
+        fid_cosmo = obs.cosmos['fiducial']
         Tcmb = fid_cosmo.T_cmb()
         if lensed_Cl:
             fid_cl = fid_cosmo.lensed_cl(self.l_max)
@@ -133,11 +191,11 @@ class CAMB_CMB_Primary(CMB_Primary):
         # loop over parameters, and compute derivatives
         for par, dx in zip(obs.parameters, dx_array):
             if lensed_Cl:
-                cl_left = obs.cosmos[par + '_CLASS_left'].lensed_cl(self.l_max)
-                cl_right = obs.cosmos[par + '_CLASS_right'].lensed_cl(self.l_max)
+                cl_left = obs.cosmos[par + '_left'].lensed_cl(self.l_max)
+                cl_right = obs.cosmos[par + '_right'].lensed_cl(self.l_max)
             else:
-                cl_left = obs.cosmos[par + '_CLASS_left'].raw_cl(self.l_max)
-                cl_right = obs.cosmos[par + '_CLASS_right'].raw_cl(self.l_max)
+                cl_left = obs.cosmos[par + '_left'].raw_cl(self.l_max)
+                cl_right = obs.cosmos[par + '_right'].raw_cl(self.l_max)
 
             for spec_xy in ['tt', 'te', 'ee']:
                 df[par + '_' + spec_xy] = (Tcmb*1.0e6)**2 *\

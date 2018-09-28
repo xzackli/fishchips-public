@@ -156,8 +156,9 @@ class CMB_Lensing_Only(Experiment):
         Tcmb = fid_cosmo.T_cmb()
         fid_cl = fid_cosmo.lensed_cl(self.l_max)
         
-        fid = {'kk': 0.25 * ((fid_cl['ell']+2)*(fid_cl['ell']+1)
-               *(fid_cl['ell'])*(fid_cl['ell']-1) * fid_cl['pp'])}
+        fid = {'kk': 0.25 * ((fid_cl['ell']+1)
+               *(fid_cl['ell']))**2 * fid_cl['pp']}
+
 
         # the primary task of this function is to compute the derivatives from `cosmos`,
         # the dictionary of computed CLASS cosmologies
