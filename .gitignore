@@ -1,6 +1,6 @@
 notebooks/output/*
-private/*
-private
+private_fishchips_notebooks/*
+private_fishchips_notebooks
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

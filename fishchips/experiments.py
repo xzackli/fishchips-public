@@ -171,7 +171,7 @@ class CMB_Primary(Experiment):
 
         """
         # first compute the fiducial
-        fid_cosmo = obs.cosmos['CLASS_fiducial']
+        fid_cosmo = obs.cosmos['fiducial']
         Tcmb = fid_cosmo.T_cmb()
         if lensed_Cl:
             fid_cl = fid_cosmo.lensed_cl(self.l_max)
@@ -189,11 +189,11 @@ class CMB_Primary(Experiment):
         # loop over parameters, and compute derivatives
         for par, dx in zip(obs.parameters, dx_array):
             if lensed_Cl:
-                cl_left = obs.cosmos[par + '_CLASS_left'].lensed_cl(self.l_max)
-                cl_right = obs.cosmos[par + '_CLASS_right'].lensed_cl(self.l_max)
+                cl_left = obs.cosmos[par + '_left'].lensed_cl(self.l_max)
+                cl_right = obs.cosmos[par + '_right'].lensed_cl(self.l_max)
             else:
-                cl_left = obs.cosmos[par + '_CLASS_left'].raw_cl(self.l_max)
-                cl_right = obs.cosmos[par + '_CLASS_right'].raw_cl(self.l_max)
+                cl_left = obs.cosmos[par + '_left'].raw_cl(self.l_max)
+                cl_right = obs.cosmos[par + '_right'].raw_cl(self.l_max)
 
             for spec_xy in ['tt', 'te', 'ee']:
                 df[par + '_' + spec_xy] = (Tcmb*1.0e6)**2 *\
@@ -324,7 +324,7 @@ class rs_dv_BAO_Experiment(Experiment):
 
         """
         # first compute the fiducial
-        fid_cosmo = obs.cosmos['CLASS_fiducial']
+        fid_cosmo = obs.cosmos['fiducial']
         fid = {}
 
         # the primary task of this function is to compute the derivatives from `cosmos`,
@@ -338,14 +338,14 @@ class rs_dv_BAO_Experiment(Experiment):
             df[par + '_dfdtheta'] = []
             
             for z in self.redshifts:
-                c_left = obs.cosmos[par + '_CLASS_left']
+                c_left = obs.cosmos[par + '_left']
                 da_left = c_left.angular_distance(z)
                 dr_left = z / c_left.Hubble(z)
                 dv_left = pow(da_left * da_left * (1 + z) * (1 + z) * dr_left, 1. / 3.)
                 rs_left = c_left.rs_drag()
                 f_left = rs_left / dv_left
 
-                c_right = obs.cosmos[par + '_CLASS_right']
+                c_right = obs.cosmos[par + '_right']
                 da_right = c_right.angular_distance(z)
                 dr_right = z / c_right.Hubble(z)
                 dv_right = pow(da_right * da_right * (1 + z) * (1 + z) * dr_right, 1. / 3.)

@@ -152,7 +152,7 @@ class CMB_Lensing_Only(Experiment):
 
         """
         # first compute the fiducial
-        fid_cosmo = obs.cosmos['CLASS_fiducial']
+        fid_cosmo = obs.cosmos['fiducial']
         Tcmb = fid_cosmo.T_cmb()
         fid_cl = fid_cosmo.lensed_cl(self.l_max)
         
@@ -167,8 +167,8 @@ class CMB_Lensing_Only(Experiment):
         df = {}
         # loop over parameters, and compute derivatives
         for par, dx in zip(obs.parameters, dx_array):
-            cl_left = obs.cosmos[par + '_CLASS_left'].lensed_cl(self.l_max)
-            cl_right = obs.cosmos[par + '_CLASS_right'].lensed_cl(self.l_max)
+            cl_left = obs.cosmos[par + '_left'].lensed_cl(self.l_max)
+            cl_right = obs.cosmos[par + '_right'].lensed_cl(self.l_max)
             
             kk_left = (0.25 * (cl_left['ell']+2)*(cl_left['ell']+1)
                       *(cl_left['ell'])*(cl_left['ell']-1) * cl_left['pp'])

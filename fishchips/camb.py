@@ -45,7 +45,8 @@ class CAMBy:
         #--> convergence kappa and shear gamma: the share the same harmonic power spectrum:
         #Cl^gamma-gamma = 1/4 * [(l+2)!/(l-2)!] C_l^phi-phi
         ells = np.arange(len(self.raw_cl_dict['pp']))
-        self.lensed_cl_dict['pp'] = (self.raw_cl_dict['pp'] / ells**4)
+        self.lensed_cl_dict['pp'] = self.raw_cl_dict['pp']
+        self.lensed_cl_dict['pp'][1:] /= ells[1:]**4
         self.lensed_cl_dict['kk'] = self.lensed_cl_dict['pp'] * (ells * (ells+1.)/2.)**2.
         
     def clip_l_max(self, input_dict, l_max):
@@ -110,14 +111,14 @@ class CAMB_Observables:
         iteratively looks in the template file for the parameter,
         and replaces the line with "parameter = value".
         """
-        
-        with open(self.CAMB_directory + "/" + template_file) as old, open( f'{self.CAMB_directory}/temp.ini', 'w') as new:
+        #print(f'wrting {self.CAMB_directory}/temp.ini')
+        with open(self.CAMB_directory + "/" + template_file) as old, open( f'{self.CAMB_directory}/fishchips.ini', 'w') as new:
             for line in old:
                 unchanged = True
                 if (len(line) > 0):
                     if line[0] != '#':
                         for param in CAMB_dict:
-                            if (param in line) and ("=" in line):
+                            if (param + " " in line) and ("=" in line):
                                 new.write(f"{param} = {CAMB_dict[param]}\n")
                                 unchanged = False
                                 break
@@ -130,13 +131,15 @@ class CAMB_Observables:
         """
         
         # first write a temp.ini
-        self.write_ini_file(CAMB_dict)
+        self.write_ini_file(CAMB_dict, template_file=self.CAMB_template)
         
         if debug:
             print("Calling CAMB.")
         # now run CAMB
-        process = Popen([f'{self.CAMB_directory}/{self.CAMB_executable}',
-                     f'{self.CAMB_directory}/temp.ini'], 
+            print([f'./{self.CAMB_executable}',
+                     f'fishchips.ini'], self.CAMB_directory)
+        process = Popen([f'./{self.CAMB_executable}',
+                     f'fishchips.ini'], 
                         stdout=PIPE, 
                         stderr=PIPE, 
                         cwd=self.CAMB_directory)
