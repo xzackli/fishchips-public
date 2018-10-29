@@ -1,6 +1,5 @@
 """Experiment classes for lensing experiments."""
 
-from orphics import lensing, io, stats, cosmology, maps
 from fishchips.experiments import Experiment
 import numpy as np
 import itertools
@@ -21,12 +20,14 @@ class CMB_Lensing_Only(Experiment):
         # get lensing noise
         # Initialize cosmology and Clkk. Later parts need dimensionless spectra.
         self.l_min = lens_tellmin
-        # CLASS can only go up to 550
+        # CLASS can only go up to 5500
         self.l_max = min(max(lens_tellmax, lens_pellmax)+1000,5500) 
         self.k_min = lens_kmin
         self.k_max = lens_kmax
         self.f_sky = lens_f_sky
         
+        # import orphics only here! 
+        from orphics import lensing, io, stats, cosmology, maps
         # generate cosmology with orphics
         lmax = self.l_max
         cc = cosmology.Cosmology(lmax=lmax,pickling=True,dimensionless=False)
