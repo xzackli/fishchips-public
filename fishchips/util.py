@@ -3,6 +3,7 @@
 import numpy as np
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
+import corner
 
 ALPHA1 = 1.52
 ALPHA2 = 2.48
@@ -289,4 +290,30 @@ def neutrino_dict(input_dict, dmsq_atm=2e-3, hierarchy='NH'):
     
     neut_dict['N_ncdm'] = 2
     return neut_dict
+
+
+
+def unitize_cov(imp_cov, scales):
+    imp_cov = imp_cov.copy()
+    npar = imp_cov.shape[0]
+    for i in range(npar):
+        for j in range(npar):
+            imp_cov[i,j] *= scales[i] * scales[j]
+    return imp_cov
+
+def get_samps(inp_cov, centers, num=int(1e7)):
+    samps = np.random.multivariate_normal( np.array(centers)/np.sqrt(np.diag(inp_cov)), 
+                                           unitize_cov(inp_cov,1./np.sqrt(np.diag(inp_cov))), num)
+    
+    for i in range(inp_cov.shape[0]):
+        samps.T[i] *= np.sqrt(inp_cov[i,i])
+        
+    return samps
+
+def get_95_exclusion(samps, param_index, num=int(1e7), weights=None):
+    # NOTE: sigma_p MUST BE THE LAST VARIABLE
+    onesig, twosig = corner.quantile(samps[:,param_index], 
+                                 [0.68,0.95], 
+                                 weights=weights)
+    return twosig
 
