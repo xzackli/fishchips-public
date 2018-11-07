@@ -141,7 +141,7 @@ class Observables:
         for x, y in zip(self.check_deriv_steps[par], derivs):
             l = plt.scatter([x], [y])
             l.set_zorder(50)
-        axes[1].set_ylabel(r"$\Delta C_{\ell = " + str(ell) + r"}^{" + spec + "} / $\Delta$" + par_str + "$")
+        axes[1].set_ylabel(r"$\Delta C_{\ell = " + str(ell) + r"}^{" + spec + "} / \Delta" + par_str + "$")
         axes[1].set_xlabel("$\Delta" + par_str + "$")
         
         
