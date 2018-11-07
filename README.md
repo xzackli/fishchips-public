@@ -49,7 +49,7 @@ classy_template = {'output': 'tCl pCl lCl',
 classy_template.update(dict(zip(obs.parameters, obs.fiducial)))
 
 # generate the fiducial cosmology
-obs.compute_cosmo(key='CLASS_fiducial', classy_dict=classy_template)
+obs.compute_cosmo(key='fiducial', classy_dict=classy_template)
 
 # generate an observables dictionary, looping over parameters
 for par, par_left, par_right in zip(obs.parameters, obs.left, obs.right):
@@ -58,8 +58,8 @@ for par, par_left, par_right in zip(obs.parameters, obs.left, obs.right):
     classy_right = classy_template.copy()
     classy_right[par] = par_right
     # pass the dictionaries full of configurations to get computed
-    obs.compute_cosmo(key=par + '_CLASS_left', classy_dict=classy_left)
-    obs.compute_cosmo(key=par + '_CLASS_right', classy_dict=classy_right)
+    obs.compute_cosmo(key=par + '_left', classy_dict=classy_left)
+    obs.compute_cosmo(key=par + '_right', classy_dict=classy_right)
 
 # compute the Fisher matrix with a Planck-like experiment
 example_Planck = fishchips.experiments.CMB_Primary(
