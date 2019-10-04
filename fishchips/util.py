@@ -3,7 +3,6 @@
 import numpy as np
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
-import corner
 
 ALPHA1 = 1.52
 ALPHA2 = 2.48
@@ -70,9 +69,13 @@ def get_ellipse(par1, par2, params, cov, scale1=1, scale2=1):
         np.sqrt(sigma_x2), np.sqrt(sigma_y2), sigma_xy
 
 
-def plot_ellipse(ax, par1, par2, obs, cov, color='black',
+def plot_ellipse(ax, par1, par2, parameters, fiducial, cov,
                  resize_lims=True, positive_definite=[], one_sigma_only=False,
-                 scale1=1, scale2=1, ls1='--', ls2='-'):
+                 scale1=1, scale2=1,
+                 kwargs1={'ls':'--'},
+                 kwargs2={'ls':'-'},
+                 default_kwargs={'lw':1, 'facecolor':'none',
+                                 'edgecolor':'black'}):
     """
     Plot 1 and 2-sigma ellipses, from Coe 2009.
 
@@ -81,7 +84,8 @@ def plot_ellipse(ax, par1, par2, obs, cov, color='black',
         ax (matpotlib axis): axis upon which the ellipses will be drawn
         par1 (string): parameter 1 name
         par2 (string): parameter 2 name
-        obs (Observables object): contains names of parameters to constrain, etc
+        parameters (list): list of parameter names
+        fiducial (array): fiducial values of parameters
         cov (numpy array): covariance matrix
         color (string): color to plot ellipse with
         resize_lims (boolean): flag for changing the axis limits
@@ -95,29 +99,38 @@ def plot_ellipse(ax, par1, par2, obs, cov, color='black',
             plotting window
 
     """
-    params = obs.parameters
+    params = parameters
     pind = dict(zip(params, list(range(len(params)))))
     i1 = pind[par1]
     i2 = pind[par2]
     a, b, theta, sigma_x, sigma_y, sigma_xy = get_ellipse(
         par1, par2, params, cov, scale1, scale2)
 
-    fid1 = obs.fiducial[i1] * scale1
-    fid2 = obs.fiducial[i2] * scale2
+    fid1 = fiducial[i1] * scale1
+    fid2 = fiducial[i2] * scale2
+
+    # use defaults and then override with other kwargs
+    kwargs1_temp = default_kwargs.copy()
+    kwargs1_temp.update(kwargs1)
+    kwargs1 = kwargs1_temp
+    kwargs2_temp = default_kwargs.copy()
+    kwargs2_temp.update(kwargs2)
+    kwargs2 = kwargs2_temp
 
     if not one_sigma_only:
+        # 2-sigma ellipse
         e1 = Ellipse(
             xy=(fid1, fid2),
             width=a * 2 * ALPHA2, height=b * 2 * ALPHA2,
-            angle=theta, edgecolor=color, lw=2, facecolor='none', ls=ls2)
+            angle=theta, **kwargs2)
         ax.add_artist(e1)
         e1.set_clip_box(ax.bbox)
 
     # 1-sigma ellipse
     e2 = Ellipse(
         xy=(fid1, fid2),
-        width=a*2*ALPHA1, height=b*2*ALPHA1,
-        angle=theta, edgecolor=color, lw=2, facecolor='none', ls=ls1)
+        width=a * 2 * ALPHA1, height=b * 2 * ALPHA1,
+        angle=theta, **kwargs1)
     ax.add_artist(e2)
     e2.set_alpha(1.0)
     e2.set_clip_box(ax.bbox)
@@ -139,16 +152,33 @@ def plot_ellipse(ax, par1, par2, obs, cov, color='black',
     return sigma_x, sigma_y, sigma_xy
 
 
-def plot_triangle(obs, cov, f=None, ax=None, color='black', positive_definite=[],
-                  labels=None, scales=None):
+def plot_triangle_base(params, fiducial, cov, f=None, ax=None,
+                       positive_definite=[],
+                       labels=None, scales=None,
+                       kwargs1={'ls':'--', 'edgecolor':'black'},
+                       kwargs2={'ls':'-', 'edgecolor':'black'},
+                       color_1d='black'):
     """
     Makes a standard triangle plot.
 
-    Args:
+    Parameters
+    ----------
+        params (list):
+            list of parameter strings
+        fiducial (array):
+            numpy array consisting of where the centers of ellipses should be
+        cov (array):
+            covariance matrix
         f (optional,matplotlib figure): pass this if you already have a figure
         ax (optional,matplotlib axis): existing axis
+
+    Returns
+    -------
+        fig, ax
+            matplotlib figure and axis array
     """
-    nparams = len(obs.parameters)
+
+    nparams = len(params)
     if scales is None:
         scales = np.ones(nparams)
 
@@ -158,7 +188,7 @@ def plot_triangle(obs, cov, f=None, ax=None, color='black', positive_definite=[]
 
     if labels is None:
         labels = [(r'$\mathrm{' + p.replace('_', r'\_') + r'}$')
-                  for p in obs.parameters]
+                  for p in params]
     print(labels)
     # stitch together axes to row=nparams-1 and col=0
     # and turn off non-edge
@@ -191,10 +221,12 @@ def plot_triangle(obs, cov, f=None, ax=None, color='black', positive_definite=[]
         for jj in range(nparams):
             if ax[jj, ii] is not None:
                 if ii < jj:
-                    plot_ellipse(ax[jj, ii], obs.parameters[ii],
-                                 obs.parameters[jj], obs, cov, color=color,
+                    plot_ellipse(ax[jj, ii], params[ii],
+                                 params[jj], params, fiducial, cov,
                                  positive_definite=positive_definite,
-                                 scale1=scales[ii], scale2=scales[jj])
+                                 scale1=scales[ii], scale2=scales[jj],
+                                 kwargs1=kwargs1,
+                                 kwargs2=kwargs2)
                     if jj == nparams-1:
                         ax[jj, ii].set_xlabel(labels[ii], labelpad=30)
                         for tick in ax[jj, ii].get_xticklabels():
@@ -204,22 +236,22 @@ def plot_triangle(obs, cov, f=None, ax=None, color='black', positive_definite=[]
                 elif ii == jj:
                     # plot a gaussian if we're on the diagonal
                     sig = np.sqrt(cov[ii, ii])
-                    if obs.parameters[ii] in positive_definite:
+                    if params[ii] in positive_definite:
                         grid = np.linspace(
-                            obs.fiducial[ii],
-                            obs.fiducial[ii] + PLOT_MULT * sig, 100)
+                            fiducial[ii],
+                            fiducial[ii] + PLOT_MULT * sig, 100)
                     else:
                         grid = np.linspace(
-                            obs.fiducial[ii] - PLOT_MULT*sig,
-                            obs.fiducial[ii] + PLOT_MULT*sig, 100)
+                            fiducial[ii] - PLOT_MULT*sig,
+                            fiducial[ii] + PLOT_MULT*sig, 100)
                     posmult = 1.0
-                    if obs.parameters[ii] in positive_definite:
+                    if params[ii] in positive_definite:
                         posmult = 2.0
                     ax[jj, ii].plot(grid,
                                     posmult * np.exp(
-                                       -(grid-obs.fiducial[ii])**2 /
+                                       -(grid-fiducial[ii])**2 /
                                        (2 * sig**2)) / (sig * np.sqrt(2*np.pi)),
-                                    '-', color=color)
+                                       '-', color=color_1d)
                     if ii == nparams-1:
                         ax[jj, ii].set_xlabel(labels[ii], labelpad=30)
                 else:
@@ -228,21 +260,38 @@ def plot_triangle(obs, cov, f=None, ax=None, color='black', positive_definite=[]
     return f, ax
 
 
+def plot_triangle(obs, cov, f=None, ax=None, color='black', positive_definite=[],
+                  labels=None, scales=None):
+    """
+    Makes a standard triangle plot.
+
+    Args:
+        f (optional,matplotlib figure): pass this if you already have a figure
+        ax (optional,matplotlib axis): existing axis
+    """
+    return plot_triangle_base(
+        obs.parameters, obs.fiducial, cov, f=f, ax=ax,
+        positive_definite=positive_definite,
+        labels=labels, scales=scales,
+        kwargs1={'ls':'--', 'edgecolor':color},
+        kwargs2={'ls':'-', 'edgecolor':color},
+        color_1d=color)
+
 # From Tram's cosmology notebooks on neutrinos with CLASS.
 def get_masses(dmsq_atm, sum_masses, hierarchy):
     """
     Compute separate masses given a sum of neutrino mass.
-    
+
     Parameters
     ----------
         dmsq_atm (float) : squared mass difference between
             the large gap between species
         sum_masses (float): sum of the masses of the neutrino
             species
-        hierarchy (string): specify 'NH' for normal or 'IH' 
-            for inverted. actually just needs an 'n' in the 
+        hierarchy (string): specify 'NH' for normal or 'IH'
+            for inverted. actually just needs an 'n' in the
             string for normal, else inverted.
-            
+
     Returns
     -------
         float, float corresponding to 2,1 degeneracy masses
@@ -260,22 +309,22 @@ def get_masses(dmsq_atm, sum_masses, hierarchy):
 def neutrino_dict(input_dict, dmsq_atm=2e-3, hierarchy='NH'):
     """
     Process a dictionary and replace sum_mnu.
-    
+
     To get CLASS to get separate neutrino species, you need to change
-    the dictionary a bit. We make a copy and replace sum_mnu with 
+    the dictionary a bit. We make a copy and replace sum_mnu with
     m_ncdm and deg_ncdm.
-    
+
     Parameters
     ----------
-        input_dict (dict) : a dictionary for calling CLASS, 
+        input_dict (dict) : a dictionary for calling CLASS,
             contains the key sum_mnu
         dmsq_atm (float) : squared mass gap from atmospheric measurements
         hierarchy (string) : specify normal or inverted hierarchy, use
             'NH' or 'IH'.
-    
+
     Returns
     -------
-        dict : processed dict with m_ncdm and dec_ncdm set to the 
+        dict : processed dict with m_ncdm and dec_ncdm set to the
             right things
 
     """
@@ -287,7 +336,7 @@ def neutrino_dict(input_dict, dmsq_atm=2e-3, hierarchy='NH'):
 
         neut_dict['m_ncdm'] = str(mm)+','+str(mp)
         neut_dict['deg_ncdm'] = '2,1'
-    
+
     neut_dict['N_ncdm'] = 2
     return neut_dict
 
@@ -302,18 +351,19 @@ def unitize_cov(imp_cov, scales):
     return imp_cov
 
 def get_samps(inp_cov, centers, num=int(1e7)):
-    samps = np.random.multivariate_normal( np.array(centers)/np.sqrt(np.diag(inp_cov)), 
-                                           unitize_cov(inp_cov,1./np.sqrt(np.diag(inp_cov))), num)
-    
+    samps = np.random.multivariate_normal(
+        np.array(centers)/np.sqrt(np.diag(inp_cov)),
+        unitize_cov(inp_cov,1./np.sqrt(np.diag(inp_cov))), num)
+
     for i in range(inp_cov.shape[0]):
         samps.T[i] *= np.sqrt(inp_cov[i,i])
-        
+
     return samps
 
 def get_95_exclusion(samps, param_index, num=int(1e7), weights=None):
     # NOTE: sigma_p MUST BE THE LAST VARIABLE
-    onesig, twosig = corner.quantile(samps[:,param_index], 
-                                 [0.68,0.95], 
+    import corner
+    onesig, twosig = corner.quantile(samps[:,param_index],
+                                 [0.68,0.95],
                                  weights=weights)
     return twosig
-
