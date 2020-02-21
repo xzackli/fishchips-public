@@ -159,6 +159,7 @@ def plot_triangle_base(params, fiducial, cov, f=None, ax=None,
                        ellipse_kwargs2={'ls': '-', 'edgecolor': 'black'},
                        xlabel_kwargs={'labelpad': 30},
                        ylabel_kwargs={},
+                       fig_kwargs={'figsize': (8, 8)},
                        color_1d='black'):
     """
     Makes a standard triangle plot.
@@ -208,7 +209,7 @@ def plot_triangle_base(params, fiducial, cov, f=None, ax=None,
 
     if ax is None or f is None:
         print('generating new axis')
-        f, ax = plt.subplots(nparams, nparams, figsize=(12, 12))
+        f, ax = plt.subplots(nparams, nparams, **fig_kwargs)
 
     if labels is None:
         labels = [(r'$\mathrm{' + p.replace('_', r'\_') + r'}$')
